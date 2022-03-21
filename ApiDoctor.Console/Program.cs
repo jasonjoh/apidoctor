@@ -1,25 +1,25 @@
 /*
  * API Doctor
  * Copyright (c) Microsoft Corporation
- * All rights reserved. 
- * 
+ * All rights reserved.
+ *
  * MIT License
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy of 
- * this software and associated documentation files (the ""Software""), to deal in 
- * the Software without restriction, including without limitation the rights to use, 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the ""Software""), to deal in
+ * the Software without restriction, including without limitation the rights to use,
  * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished to do so, 
+ * Software, and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in all 
+ *
+ * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
- * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
- * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
+ *
+ * THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+ * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
@@ -88,7 +88,7 @@ namespace ApiDoctor.ConsoleApp
 #endif
 
                             SetStateFromOptions(options);
-                        })    
+                        })
                         .MapResult(
                             (PrintOptions options) => RunInvokedMethodAsync(options),
                             (CheckLinkOptions options) => RunInvokedMethodAsync(options),
@@ -250,7 +250,7 @@ namespace ApiDoctor.ConsoleApp
 
         /// <summary>
         /// Perform all of the local documentation based checks. This is the "compile"
-        /// command for the documentation that verifies that everything is clean inside the 
+        /// command for the documentation that verifies that everything is clean inside the
         /// documentation itself.
         /// </summary>
         /// <param name="options"></param>
@@ -570,7 +570,7 @@ namespace ApiDoctor.ConsoleApp
         }
 
         /// <summary>
-        /// Perform internal consistency checks on the documentation, including verify that 
+        /// Perform internal consistency checks on the documentation, including verify that
         /// code blocks have proper formatting, that resources are used properly, and that expected
         /// responses and examples conform to the resource definitions.
         /// </summary>
@@ -963,7 +963,7 @@ namespace ApiDoctor.ConsoleApp
 
         /// <summary>
         /// Executes the remote service tests defined in the documentation. This is similar to CheckDocs, expect
-        /// that the actual requests come from the service instead of the documentation. Prints the errors to 
+        /// that the actual requests come from the service instead of the documentation. Prints the errors to
         /// the console.
         /// </summary>
         /// <param name="options"></param>
@@ -1184,7 +1184,7 @@ namespace ApiDoctor.ConsoleApp
 
 
         /// <summary>
-        /// Parallel enabled for each processor that supports async lambdas. Copied from 
+        /// Parallel enabled for each processor that supports async lambdas. Copied from
         /// http://blogs.msdn.com/b/pfxteam/archive/2012/03/05/10278165.aspx
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -2132,7 +2132,7 @@ namespace ApiDoctor.ConsoleApp
                     case "FindRequestStartLine"://scan back to find the line where we can best place the http tab(start of request).
                         for (var identifierIndex = currentIndex; identifierIndex > 0; identifierIndex--)
                         {
-                            if (originalFileContents[identifierIndex].Contains("<!-- {") 
+                            if (originalFileContents[identifierIndex].Contains("<!-- {")
                                 || originalFileContents[identifierIndex].Contains("<!--{"))
                             {
                                 requestStartLine = identifierIndex;
@@ -2140,7 +2140,7 @@ namespace ApiDoctor.ConsoleApp
                                 parseStatus = "FindEndOfCodeBlock";
                                 break;
                             }
-                            if (originalFileContents[identifierIndex].Contains("```http") 
+                            if (originalFileContents[identifierIndex].Contains("```http")
                                 && HttpParser.ParseHttpRequest(method.Request).Method.Equals("GET"))
                             {
                                 originalFileContents[identifierIndex] = "```msgraph-interactive";
@@ -2216,9 +2216,13 @@ namespace ApiDoctor.ConsoleApp
 
             /* DUMP THE CODE SNIPPET FILE */
             var snippetFileContents = "---\r\ndescription: \"Automatically generated file. DO NOT MODIFY\"\r\n---\r\n" +    //header
+                                      "<!-- markdownlint-disable MD041 -->\r\n" + // Disable error for missing H1
                                       $"\r\n```{codeFenceString}\r\n" +     //code fence
-                                      $"\r\n{codeSnippet}\r\n" +            //generated snippet
-                                      "\r\n```";                            //closing fence
+                                      $"{codeSnippet}\r\n" +                //generated snippet
+                                      "```\r\n";                        //closing fence
+
+            // Scrub tabs out of markdown
+            snippetFileContents = snippetFileContents.Replace("\t", "    ");
             var directory = Path.Combine(Directory.GetParent(Path.GetDirectoryName(method.SourceFile.FullPath)).FullName, relativePathSnippetsFolder);
             Directory.CreateDirectory(directory);//Make sure snippet file directory exists
             var mdFilePath = Path.Combine(directory, snippetFileName);
@@ -2236,7 +2240,7 @@ namespace ApiDoctor.ConsoleApp
         /// <param name="method">The <see cref="MethodDefinition"/> of the request being generated a snippet for</param>
         /// <param name="issues">Issue logger to record any issues</param>
         private static HttpRequest PreProcessUrlForSnippetGeneration(HttpRequest request ,MethodDefinition method,IssueLogger issues)
-        {  
+        {
             //Version 1.1 of HTTP protocol MUST specify the host header
             if (request.HttpVersion.Equals("HTTP/1.1"))
             {
