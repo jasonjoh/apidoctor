@@ -2082,6 +2082,21 @@ namespace ApiDoctor.ConsoleApp
         {
             /* Useful variables */
             var originalFileContents = File.ReadAllLines(method.SourceFile.FullPath);
+
+            // Convert file from tabbed conceptual to zone pivot
+            if (originalFileContents.Any(s => s.Contains("(#tab/")))
+            {
+                try
+                {
+                    originalFileContents = ZonePivotUtils.ConvertTabbedToZonePivots(originalFileContents);
+                }
+                catch (ArgumentOutOfRangeException ex)
+                {
+                    FancyConsole.WriteLine($"Error converting {method.SourceFile.FullPath}");
+                    FancyConsole.WriteLine(ex.Message);
+                }
+            }
+
             var methodString = Regex.Replace(method.Identifier, @"[# .()\\/]", "").Replace("_", "-").ToLower();//cleanup the method name
             var httpRequestString = method.Request.Split(Environment.NewLine.ToCharArray()).First();
 
@@ -2093,16 +2108,18 @@ namespace ApiDoctor.ConsoleApp
             /* Useful File names and data*/
             var relativePathFolder = Path.Combine("includes", "snippets");
             const string includeSdkFileName = "snippets-sdk-documentation-link.md";
-            const string firstTabText = "\r\n# [HTTP](#tab/http)";
+            //const string firstTabText = "\r\n# [HTTP](#tab/http)";
+            const string firstTabText = "\r\n::: zone pivot=\"programming-language-curl\"";
 
             var codeFenceString = language.ToLower().Replace("#", "sharp").Replace("objective-c", "objc");
             var relativePathSnippetsFolder = Path.Combine(relativePathFolder, codeFenceString);
 
             var snippetFileName = methodString + $"-{codeFenceString}-snippets.md";
 
-            var includeText = $"# [{language}](#tab/{codeFenceString})\r\n" +
+            var includeText = $"{ZonePivotUtils.GetZonePivotForLanguage(codeFenceString)}\r\n" +
                               $"[!INCLUDE [sample-code](../{ReplaceWindowsByLinuxPathSeparators(Path.Combine(relativePathSnippetsFolder, snippetFileName))})]\r\n" +
-                              $"[!INCLUDE [sdk-documentation](../{ReplaceWindowsByLinuxPathSeparators(Path.Combine(relativePathFolder, includeSdkFileName))})]\r\n";
+                              $"[!INCLUDE [sdk-documentation](../{ReplaceWindowsByLinuxPathSeparators(Path.Combine(relativePathFolder, includeSdkFileName))})]\r\n" +
+                              $"{ZonePivotUtils.ZoneEnd}\r\n";
 
             const string includeSdkText = "<!-- markdownlint-disable MD041-->\r\n\r\n" +
                                           "> Read the [SDK documentation](https://docs.microsoft.com/graph/sdks/sdks-overview) " +
@@ -2148,7 +2165,7 @@ namespace ApiDoctor.ConsoleApp
                         }
                         break;
                     case "FindEndOfCodeBlock"://Find the end of the code block
-                        if (originalFileContents[currentIndex].Trim().Equals("```"))
+                        if (originalFileContents[currentIndex].Trim().Equals(ZonePivotUtils.ZoneEnd))
                         {
                             insertionLine = currentIndex;
                             parseStatus = "FirstTabInsertion";
@@ -2162,14 +2179,18 @@ namespace ApiDoctor.ConsoleApp
                         }
                         break;
                     case "FindEndOfTabSection"://we have inserted a code snippet tab before so look for end of tab section
-                        if (originalFileContents[currentIndex].Contains("---"))
+                        // TODO: Zone pivots remove this end marker
+                        // Need to find a way to determine the end
+                        // Maybe the first non-empty string that isn't "::: zone" or [sample-code] or [sdk-documentation]
+                        if (currentIndex == originalFileContents.Count() - 1 ||
+                            originalFileContents[currentIndex].IsNonZonePivotLine())
                         {
                             insertionLine = currentIndex - 1;//insert new language just before end of tab area
                             parseStatus = "AdditionalTabInsertion";//exit this parse mode.
                         }
-                        if (originalFileContents[currentIndex].Contains($"(#tab/{codeFenceString})"))
+                        if (originalFileContents[currentIndex].Contains(ZonePivotUtils.GetZonePivotForLanguage(codeFenceString)))
                         {
-                            originalFileContents[currentIndex] = $"# [{language}](#tab/{codeFenceString})";
+                            originalFileContents[currentIndex] = ZonePivotUtils.GetZonePivotForLanguage(codeFenceString);
                             originalFileContents[currentIndex + 1] = $"[!INCLUDE [sample-code](../{ReplaceWindowsByLinuxPathSeparators(Path.Combine(relativePathSnippetsFolder, snippetFileName))})]";//update include link. Just in case.
                             includeText = "";
                         }
@@ -2212,7 +2233,7 @@ namespace ApiDoctor.ConsoleApp
             }
 
             /* DUMP THE INJECTIONS*/
-            File.WriteAllLines(method.SourceFile.FullPath, updatedFileContents);
+            File.WriteAllLines(method.SourceFile.FullPath, updatedFileContents.RemoveMultipleBlankLines());
 
             /* DUMP THE CODE SNIPPET FILE */
             var snippetFileContents = "---\r\ndescription: \"Automatically generated file. DO NOT MODIFY\"\r\n---\r\n" +    //header
